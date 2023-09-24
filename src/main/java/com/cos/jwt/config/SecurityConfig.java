@@ -1,7 +1,9 @@
 package com.cos.jwt.config;
 
 import com.cos.jwt.auth.jwt.JwtAuthenticationFilter;
+import com.cos.jwt.auth.jwt.JwtAuthorizationFilter;
 import com.cos.jwt.filter.*;
+import com.cos.jwt.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -17,12 +19,15 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final CorsFilter corsFilter;
+    private final UserRepository userRepository;
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         //https://iseunghan.tistory.com/365 Spring Security Filter 구조
         // 시큐리티 필터보다 먼저 실행시키고 싶으면 가장 먼저 있는 SecurityContextPersistenceFilter.class 보다 전에 추가해주면된다.
         //http.addFilterBefore(new MyFilter3(), SecurityContextPersistenceFilter.class);
-        http.csrf().disable();
+        http.csrf().disable(); // http.csrf() -> 정상적인 페이지에는 Csrf Token 값을 알려줘야 하는데 Tymeleaf에서는 페이지를 만들때 자동으로 Csrf Token을 넣어줍니다.
+        //따로 추가하지 않았는데 아래와 같은 코드가 form tag안에 자동으로 생성됩니다.
+        //대신 굳이 사용자에게 보여줄 필요가 없는 값이기 때문에 hidden으로 처리한다.rest api를 이용한 서버라면, session 기반 인증과는 다르게 stateless하기 때문에 서버에 인증정보를 보관하지 않기때문에 disable시킨다.
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS) //세션을 만드는 방식을 사용하진않음 설정
         .and()
         .addFilter(corsFilter)
@@ -37,8 +42,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         // Bearer 방식 -> 토큰을 들고 가는 방식이어서 노출이 되면 안되지만 노출이 돼도 아이디랑 비밀번호를 노출되는건 아니기때문에 basic 방식보다는 안전하다.
         // 토큰은 로그인 할 때마다 서버쪽에서 다시 만들어주고 유효시간도 있기때문에 한 번 노출된다고 위험하진않다.
         // 토큰은 JWT(JSON WEB TOKEN) 사용, 세션 사용X
-        .addFilter(new JwtAuthenticationFilter(authenticationManager())) // 꼭 전달해줘야하는 파라미터 AuthenticationManager
-        // 로그인 컨트롤을 위해 UsernamePasswordAuthenticationFilter를 상속받은 JwtAuthenticationFilter객체를 넣어준다.
+        .addFilter(new JwtAuthenticationFilter(authenticationManager())) // 꼭 전달해줘야하는 파라미터 AuthenticationManager. 로그인 컨트롤을 위해 UsernamePasswordAuthenticationFilter를 상속받은 JwtAuthenticationFilter객체를 넣어준다.
+        .addFilter(new JwtAuthorizationFilter(authenticationManager(),userRepository))
         .authorizeRequests()
         .antMatchers("/api/v1/user/**")
         .access("hasRole('ROLE_USER') or hasRole('ROLE_MANAGER') or hasRole('ROLE_ADMIN')")
