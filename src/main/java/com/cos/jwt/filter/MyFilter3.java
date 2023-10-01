@@ -26,13 +26,12 @@ public class MyFilter3 implements Filter {
 
             if (headerAuth.equals("cos")) {
                 filterChain.doFilter(req,res);
+                // 다시 체인에 넘겨주지않으면 프로세스가 끝나므로 계속 프로세스를 진행하기 위해 넘겨준다.
             } else {
                 PrintWriter out = res.getWriter();
                 out.println("인증안됨");
             }
         }
 
-        //filterChain.doFilter(servletRequest,servletResponse);
-        // 다시 체인에 넘겨주지않으면 프로세스가 끝나므로 계속 프로세스를 진행하기 위해 넘겨준다.
     }
 }
